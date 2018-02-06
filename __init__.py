@@ -10,8 +10,12 @@ TODO
 
 import requests
 import re
-from bs4 import BeautifulSoup
+import json
+import tmdb3
 import firebase_admin
+
+from collections import namedtuple
+from bs4 import BeautifulSoup
 from firebase_admin import credentials, db
 
 from models.film_model import FilmModel
@@ -19,6 +23,15 @@ from models.film_model import FilmModel
 URLS = {
     'valladolid': 'https://www.ocinerioshopping.es/'
 }
+
+
+def load_configuration_file():
+    """
+    TODO
+    """
+    global config
+    config_dict = json.load(open('config/config.json'))
+    config = namedtuple('config', config_dict.keys())(*config_dict.values())
 
 
 def get_web_contents():
@@ -39,28 +52,21 @@ def get_films_in_page(page):
     """
     film_list = page.find('div', class_='component-content').find_all('div', class_='rt-block component-block')
 
-    return upload_films_to_firebase([get_film_properties(film) for film in film_list])
+    return upload_films_to_firebase([get_film_properties(film) for film in film_list if film is not None])
 
 
 def get_film_properties(film):
     """
     TODO
     """
-    # ID
-    id = int(film.find('h2').find('a').attrs['name'])
-
     # Title
     title = film.find('h2').text.strip()
 
-    # Description
-    description_container = film.find('div', id='descripcio')
-    read_more_tag = description_container.find('a', class_='sprocket-readmore').text
-    description = description_container.text.replace(read_more_tag, '').strip()
-    full_descripton = description + film.find('span', id=re.compile(r'readmore.*')).text.strip()
-    full_descripton = " ".join(full_descripton.strip().split(" "))
-
-    return FilmModel(id, title, full_descripton)
-
+    search_results = tmdb3.searchMovie(title)
+    if len(search_results):
+        return FilmModel(search_results[0])
+    else:
+        return None
 
 def upload_films_to_firebase(films):
     """
@@ -73,11 +79,9 @@ def upload_films_to_firebase(films):
     })
 
     for film in films:
-        ref = db.reference('films/' + str(film.id))
-        ref.set({
-            'title': film.title,
-            'description': film.description
-        })
+        if film is not None:
+            ref = db.reference('films/' + str(film._id))
+            ref.set(film.to_json())
 
 
 
@@ -86,6 +90,9 @@ def main():
     TODO
     """
 
+    load_configuration_file()
+    tmdb3.set_key(config.tmdb_api_key)
+    tmdb3.set_locale('es', 'ES')
     get_web_contents()
 
 
