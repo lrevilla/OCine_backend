@@ -34,6 +34,8 @@ class FilmModel(object):
         self.poster_urls = {self.__get_size_name(size): poster.geturl(size) for poster in self._movie.posters
                             for size in poster.sizes()}
 
+        self.trailer_urls = [trailer.geturl() for trailer in self._movie.youtube_trailers]
+
     def __get_size_name(self, size):
         """
         TODO
@@ -47,6 +49,9 @@ class FilmModel(object):
         """
         TODO
         """
+        if not self._movie.runtime:
+            return 0
+
         return str(self._movie.runtime / 60) + ' h ' + str(self._movie.runtime % 60) + ' min'
 
     def to_json(self):
