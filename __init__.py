@@ -68,11 +68,12 @@ def get_film_properties(film):
     else:
         return None
 
+
 def upload_films_to_firebase(films):
     """
     TODO
     """
-    cred = credentials.Certificate('config/fire_base_config.json')
+    cred = credentials.Certificate('config/firebase_config.json')
 
     firebase_admin.initialize_app(cred, {
         'databaseURL': 'https://ocine-ca275.firebaseio.com/'
@@ -82,7 +83,6 @@ def upload_films_to_firebase(films):
         if film is not None:
             ref = db.reference('films/' + str(film._id))
             ref.set(film.to_json())
-
 
 
 def main():
