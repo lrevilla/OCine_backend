@@ -5,16 +5,26 @@ TODO
 
 import re
 import locale
+from imdb import IMDb
+from datetime import datetime
+from base_model import BaseModel
+from session_model import SessionModel
 
 
-class FilmModel(object):
+class FilmModel(BaseModel):
     """
     TODO
     """
 
-    def __init__(self, movie):
+    _imdb_instance = IMDb()
+
+    def __init__(self, movie, film_html):
         locale.setlocale(locale.LC_TIME, "es_ES")
         self._movie = movie
+        self._film_html = film_html
+        self._imdb_id = int(self._movie.imdb.replace('tt', ''))
+        self._imdb_movie = self._imdb_instance.get_movie(self._imdb_id)
+
         self.__populate_fields()
 
     def __populate_fields(self):
@@ -31,32 +41,50 @@ class FilmModel(object):
         self.genres = [genre.name for genre in self._movie.genres]
         self.casting = [{'name': cast.name, 'character': cast.character} for cast in self._movie.cast]
         self.director = [crew.name for crew in self._movie.crew if crew.job == 'Director'][0]
-        self.poster_urls = {self.__get_size_name(size): poster.geturl(size) for poster in self._movie.posters
-                            for size in poster.sizes()}
-
+        self.cover_url = self.__get_cover_url()
         self.trailer_urls = [trailer.geturl() for trailer in self._movie.youtube_trailers]
-
-    def __get_size_name(self, size):
-        """
-        TODO
-        """
-        if size.startswith('w'):
-            return size.replace('w', '')
-
-        return size
+        self.sessions = self.__get_sessions()
 
     def __get_movie_duration_string(self):
         """
         TODO
         """
-        if not self._movie.runtime:
-            return 0
+        self.runtime = self._movie.runtime
 
-        return str(self._movie.runtime / 60) + ' h ' + str(self._movie.runtime % 60) + ' min'
+        if not self.runtime:
+            if 'runtimes' not in self._imdb_movie or not self._imdb_movie['runtimes']:
+                self.runtime = int(self._film_html.find('div', class_='type').text.split(":")[1].split(".")[0].strip())
+            else:
+                self.runtime = int(self._imdb_movie['runtimes'][0])
 
-    def to_json(self):
+        return str(self.runtime / 60) + ' h ' + str(self.runtime % 60) + ' min'
+
+    def __get_cover_url(self):
         """
         TODO
         """
+        url_fragments = self._imdb_movie['cover url'].split('@')
+        return '@'.join([url_fragments[0], '._SY720_.jpg'])
 
-        return {key: value for key, value in self.__dict__.iteritems() if not key.startswith('_')}
+    def __get_sessions(self):
+        """
+        TODO
+        """
+        session_list = self._film_html.find('div', class_='contingut').find_all("tr", class_="horari")
+        sessions_by_day = {
+            session.find("th").text: [hour.find("a").text.strip() for hour in session.find_all("td")]
+            for session in session_list
+        }
+
+        datetime_sessions = [self.__sessions_to_datetime(week_day, day_sessions)
+                             for week_day, day_sessions in sessions_by_day.items()]
+
+        return [SessionModel(session.isoformat()).to_json() for session_sublist in datetime_sessions
+                for session in session_sublist]
+
+    def __sessions_to_datetime(self, day, sessions):
+        """
+        TODO
+        """
+        day = '-'.join([day.split(" ")[0], str(datetime.now().year)])
+        return [datetime.strptime((" ".join([day, session])), '%d-%m-%Y %H:%M') for session in sessions]

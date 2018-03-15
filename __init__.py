@@ -55,18 +55,18 @@ def get_films_in_page(page):
     return upload_films_to_firebase([get_film_properties(film) for film in film_list if film is not None])
 
 
-def get_film_properties(film):
+def get_film_properties(html_film_node):
     """
     TODO
     """
     # Title
-    title = film.find('h2').text.strip()
+    title = html_film_node.find('h2').text.strip()
 
     search_results = tmdb3.searchMovie(title)
     if len(search_results):
-        return FilmModel(search_results[0])
-    else:
-        return None
+        return FilmModel(search_results[0], html_film_node)
+
+    return None
 
 
 def upload_films_to_firebase(films):
