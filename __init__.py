@@ -61,10 +61,11 @@ def get_film_properties(html_film_node):
     """
     # Title
     title = html_film_node.find('h2').text.strip()
+    ocine_id = int(html_film_node.find('h2').find('a').attrs['name'])
 
     search_results = tmdb3.searchMovie(title)
     if len(search_results):
-        return FilmModel(search_results[0], html_film_node)
+        return FilmModel(search_results[0], ocine_id, html_film_node)
 
     return None
 

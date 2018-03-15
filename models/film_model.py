@@ -6,7 +6,6 @@ TODO
 import re
 import locale
 from imdb import IMDb
-from datetime import datetime
 from base_model import BaseModel
 from session_model import SessionModel
 
@@ -18,8 +17,9 @@ class FilmModel(BaseModel):
 
     _imdb_instance = IMDb()
 
-    def __init__(self, movie, film_html):
+    def __init__(self, movie, ocine_id, film_html):
         locale.setlocale(locale.LC_TIME, "es_ES")
+        self.ocine_id = ocine_id
         self._movie = movie
         self._film_html = film_html
         self._imdb_id = int(self._movie.imdb.replace('tt', ''))
@@ -69,22 +69,14 @@ class FilmModel(BaseModel):
     def __get_sessions(self):
         """
         TODO
+        find_all("a", id=re.compile('^Tips-'))
         """
-        session_list = self._film_html.find('div', class_='contingut').find_all("tr", class_="horari")
-        sessions_by_day = {
-            session.find("th").text: [hour.find("a").text.strip() for hour in session.find_all("td")]
-            for session in session_list
-        }
+        session_list = self._film_html.find('div', class_='contingut').find_all('tr', class_='horari')
 
-        datetime_sessions = [self.__sessions_to_datetime(week_day, day_sessions)
-                             for week_day, day_sessions in sessions_by_day.items()]
+        # current_day_string = '-'.join([self._date_sessions_html.find('th').text.split(' ')[0],
+        #                               str(datetime.now().year)])
+        # session_hours = self._date_sessions_html.find_all('a', id=re.compile('^Tips-'))
 
-        return [SessionModel(session.isoformat()).to_json() for session_sublist in datetime_sessions
-                for session in session_sublist]
-
-    def __sessions_to_datetime(self, day, sessions):
-        """
-        TODO
-        """
-        day = '-'.join([day.split(" ")[0], str(datetime.now().year)])
-        return [datetime.strptime((" ".join([day, session])), '%d-%m-%Y %H:%M') for session in sessions]
+        return [SessionModel(day_session_html.find('th').text.split(' ')[0], session)
+                for day_session_html in session_list
+                for session in day_session_html.find_all('a', id=re.compile('^Tips-'))]
