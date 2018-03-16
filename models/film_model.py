@@ -69,14 +69,8 @@ class FilmModel(BaseModel):
     def __get_sessions(self):
         """
         TODO
-        find_all("a", id=re.compile('^Tips-'))
         """
         session_list = self._film_html.find('div', class_='contingut').find_all('tr', class_='horari')
-
-        # current_day_string = '-'.join([self._date_sessions_html.find('th').text.split(' ')[0],
-        #                               str(datetime.now().year)])
-        # session_hours = self._date_sessions_html.find_all('a', id=re.compile('^Tips-'))
-
-        return [SessionModel(day_session_html.find('th').text.split(' ')[0], session)
+        return [SessionModel(day_session_html.find('th').text.split(' ')[0], session).to_json()
                 for day_session_html in session_list
                 for session in day_session_html.find_all('a', id=re.compile('^Tips-'))]

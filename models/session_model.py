@@ -47,17 +47,11 @@ class SessionModel(BaseModel):
         room_html = BeautifulSoup(requests.post(self._params['action'], data=self._params).text, 'html.parser')
         seats_grid = room_html.find('div', class_='bloc').find_all('table')[1].find_all('tr')
 
-        # seat_list = [SeatModel(seats_grid[row].find_all('td')[cell].find('input'), row, cell)
-        #              for row in range(0, len(seats_grid))
-        #              for cell in range(0, len(seats_grid[row].find_all('td')))]
         seat_list = []
-
         for row in range(0, len(seats_grid)):
             for cell in range(0, len(seats_grid[row].find_all('td'))):
                 current_seat = SeatModel(seats_grid[row].find_all('td')[cell].find('input'), row, cell)
                 if current_seat.type != SeatTypes.DISABLED:
-                    print('adding seat ' + str(current_seat.row) + ", " + str(current_seat.column))
-                    seat_list.append(current_seat.to_json())
+                    seat_list.append(current_seat)
 
-        # return [seat for seat in seat_list if seat.type != SeatTypes.DISABLED]
-        return seat_list
+        return [seat.to_json() for seat in seat_list if seat.type != SeatTypes.DISABLED]
